@@ -1,13 +1,18 @@
 import express from "express";
+import session from "express-session";
 import "dotenv/config";
 import cors from "cors";
+import passport from "./config/passport/index.js";
 
 import apiV1Router from "./routes/apiV1Router.js";
 import connectDatabase from "./database/dbConnection.js";
 
+// configs
 const app = express();
-const port = process.env.PORT || 5000;
-
+app.use(express.json());
+app.use(session({ secret: process.env.SESSION_SECRET, resave: false, saveUninitialized: false }));
+app.use(passport.initialize());
+app.use(passport.session());
 app.use(
     cors({
         origin: "*",
@@ -16,9 +21,11 @@ app.use(
     })
 );
 
+// port
+const port = process.env.PORT || 5000;
 
+// routes
 app.get('/server-status', (req, res) => res.send("live"));
-
 app.use('/api/v1', apiV1Router);
 
 // Connect to server
