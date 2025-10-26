@@ -12,3 +12,5 @@ passport.deserializeUser((id, done) => {
             .catch((error) => done(error));
     });
 });
+
+export default passport;

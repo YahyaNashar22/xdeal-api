@@ -25,7 +25,8 @@ const userSchema = new Schema(
         },
         profile_picture: {
             type: String,
-            required: true
+            required: false,
+            default: "/uploads/users/avatar.png"
         },
         number_of_listings: {
             type: Number,
@@ -51,7 +52,7 @@ const userSchema = new Schema(
         }
     }, { timestamps: true });
 
-    // hash password before saving document
+// hash password before saving document
 userSchema.pre("save", async function (next) {
     if (!this.isModified("password")) return next();
     const bcrypt = await import("bcryptjs");

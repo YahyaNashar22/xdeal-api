@@ -1,5 +1,6 @@
 import passport from "passport";
 import { generateToken } from "../utils/generateToken.js";
+import User from "../models/user.model.js";
 
 export const login = (req, res, next) => {
     passport.authenticate("local", { session: false }, (error, user, info) => {
@@ -20,3 +21,13 @@ export const login = (req, res, next) => {
         });
     })(req, res, next);
 };
+
+export const signup = async (req, res) => {
+    try {
+        const { full_name, email, phone_number, password, profile_picture } = req.body;
+        const user = await User.create({ full_name, email, phone_number, password, profile_picture });
+        res.status(201).json({ message: "User created", user });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+}
