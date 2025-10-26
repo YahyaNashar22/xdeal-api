@@ -37,6 +37,11 @@ const userSchema = new Schema(
             enum: ["en", "ar"],
             default: "en"
         },
+        is_admin: {
+            type: Boolean,
+            required: true,
+            default: false
+        }
     }, { timestamps: true });
 
 const User = model("User", userSchema);
