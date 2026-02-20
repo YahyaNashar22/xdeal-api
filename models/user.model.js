@@ -23,6 +23,10 @@ const userSchema = new Schema(
             required: true,
             select: false
         },
+        address: {
+            type: String,
+            required: false,
+        },
         profile_picture: {
             type: String,
             required: false,

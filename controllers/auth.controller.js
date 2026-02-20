@@ -1,38 +1,55 @@
-import passport from "passport";
+import bcrypt from "bcryptjs";
 
 import User from "../models/user.model.js";
+
 import { generateToken } from "../utils/generateToken.js";
 import transporter from "../utils/nodemailerTransporter.js";
 import Otp from "../models/otp.model.js";
 
-export const login = (req, res, next) => {
-    passport.authenticate("local", { session: false }, (error, user, info) => {
-        if (error) return next(error);
-        if (!user) return res.status(400).json({ message: info?.message || "login failed" });
+export const login = async (req, res) => {
 
-        const token = generateToken(user);
-        res.json({
+    const { email, password } = req.body;
+
+    try {
+
+
+        const existingUser = await User.findOne({ email }).select('+password');
+
+        if (!existingUser) return res.status(404).json({ error: "email does not exist" });
+
+        const isValidPassword = bcrypt.compareSync(password, existingUser.password);
+        if (!isValidPassword)
+            return res.status(401).json({ message: "Wrong  Password" });
+
+        const token = generateToken(existingUser);
+
+        return res.status(200).json({
             token,
-            user: {
-                id: user._id,
-                full_name: user.full_name,
-                email: user.email,
-                phone_number: user.phone_number,
-                plan: user.plan,
-                is_admin: user.is_admin
-            }
+            user: existingUser
         });
-    })(req, res, next);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Something went wrong" });
+    }
 };
 
 export const signup = async (req, res) => {
     try {
-        const { full_name, email, phone_number, password, profile_picture } = req.body;
-        const user = await User.create({ full_name, email, phone_number, password, profile_picture });
-        res.status(201).json({ message: "User created", user });
-    } catch (err) {
-        console.log(err)
-        return res.status(500).json({ error: err.message });
+        const { full_name, email, phone_number, address, password, profile_picture } = req.body;
+
+        const existingUser = await User.findOne({ email });
+
+        if (existingUser) return res.status(400).json({ error: "email already exists" });
+
+        const salt = bcrypt.genSaltSync(10);
+        const hashedPassword = bcrypt.hashSync(password, salt);
+
+        const user = await User.create({ full_name, email, phone_number, address, password: hashedPassword, profile_picture });
+
+        return res.status(201).json({ message: "User created", user });
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({ error: error.message });
     }
 }
 
@@ -54,6 +71,8 @@ export const sendOtp = async (req, res) => {
             expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
         });
 
+        console.log("OTP:", otp)
+
         const mailOptions = {
             from: process.env.SENDER_EMAIL,
             to: email,
@@ -71,9 +90,9 @@ export const sendOtp = async (req, res) => {
 
         await transporter.sendMail(mailOptions);
         return res.json({ message: "OTP sent successfully", otp });
-    } catch (err) {
-        console.log(err)
-        return res.status(500).json({ error: err.message });
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({ error: error.message });
     }
 }
 
@@ -92,8 +111,22 @@ export const verifyOtp = async (req, res) => {
 
         res.json({ message: "OTP verified" });
 
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Verification failed" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Verification failed", error: error.message });
+    }
+};
+
+export const getMe = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select("-password");
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 };

@@ -1,19 +1,23 @@
 import express from "express";
-import session from "express-session";
 import "dotenv/config";
 import cors from "cors";
-
-import passport from "./config/passport/index.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
 import apiV1Router from "./routes/apiV1Router.js";
 import connectDatabase from "./database/dbConnection.js";
 
 // configs
 const app = express();
+
+// Required for ES modules (__dirname replacement)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Serve uploads folder
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 app.use(express.json());
-app.use(session({ secret: process.env.SESSION_SECRET, resave: false, saveUninitialized: false }));
-app.use(passport.initialize());
-app.use(passport.session());
 app.use(
     cors({
         origin: "*",
