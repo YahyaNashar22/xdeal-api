@@ -4,6 +4,12 @@ const { Schema, model } = mongoose;
 
 const vehicleListingSchema = new Schema(
     {
+        listing_type: {
+            type: String,
+            enum: ["vehicle", "accessory"],
+            required: true,
+            default: "vehicle"
+        },
         name: {
             type: String,
             required: true
@@ -36,11 +42,15 @@ const vehicleListingSchema = new Schema(
         },
         brand: {
             type: String,
-            required: true
+            required: function () {
+                return this.listing_type === "vehicle";
+            }
         },
         model: {
             type: String,
-            required: true
+            required: function () {
+                return this.listing_type === "vehicle";
+            }
         },
         version: {
             type: String,
@@ -54,27 +64,35 @@ const vehicleListingSchema = new Schema(
         },
         kilometers: {
             type: Number,
-            required: true,
+            required: function () {
+                return this.listing_type === "vehicle";
+            },
             default: 0
         },
         year: {
             type: String,
-            required: true,
+            required: function () {
+                return this.listing_type === "vehicle";
+            },
         },
         fuel_type: {
             type: String,
             enum: ['petrol', 'diesel', 'electric', 'hybrid', 'gas'],
-            required: true
+            required: function () {
+                return this.listing_type === "vehicle";
+            }
         },
         transmission_type: {
             type: String,
-            enum: ['automatic', 'manual', 'semi-automatic'],
-            required: true
+            required: function () {
+                return this.listing_type === "vehicle";
+            }
         },
         body_type: {
             type: String,
-            enum: ['sedan', 'hatchback', 'suv', 'coupe', 'convertible', 'wagon', 'van', 'pickup', 'truck'],
-            required: true
+            required: function () {
+                return this.listing_type === "vehicle";
+            }
         },
         power: {
             type: Number,
@@ -86,25 +104,47 @@ const vehicleListingSchema = new Schema(
         },
         air_conditioning: {
             type: String,
-            enum: ['manual', 'automatic', 'none'],
-            required: true
+            required: function () {
+                return this.listing_type === "vehicle";
+            }
         },
         color: {
             type: String,
-            required: true
+            required: function () {
+                return this.listing_type === "vehicle";
+            }
         },
         number_of_seats: {
             type: Number,
-            required: true
+            required: function () {
+                return this.listing_type === "vehicle";
+            }
         },
         number_of_doors: {
             type: Number,
-            required: true
+            required: function () {
+                return this.listing_type === "vehicle";
+            }
         },
         interior: {
             type: String,
-            enum: ['cloth', 'leather', 'full leather', 'partial leather', 'alcantara'],
-            required: true
+            required: function () {
+                return this.listing_type === "vehicle";
+            }
+        },
+        accessory_type: {
+            type: String,
+            required: function () {
+                return this.listing_type === "accessory";
+            }
+        },
+        compatibility: {
+            type: [String],
+            default: []
+        },
+        warranty_months: {
+            type: Number,
+            required: false,
         },
         payment_option: {
             type: String,

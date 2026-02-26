@@ -1,6 +1,7 @@
 // src/controllers/vehicle-listings.controller.js
 import mongoose from "mongoose";
 import VehicleListing from "../models/vehicleListing.model.js";
+import VehicleCategories from "../models/vehicleCategories.model.js";
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -24,6 +25,7 @@ const pickListingBody = (body) => {
     // keep this in sync with schema
     const data = {
         name: body?.name,
+        listing_type: body?.listing_type,
         images: body?.images,
         price: body?.price,
         description: body?.description,
@@ -45,6 +47,9 @@ const pickListingBody = (body) => {
         number_of_seats: body?.number_of_seats,
         number_of_doors: body?.number_of_doors,
         interior: body?.interior,
+        accessory_type: body?.accessory_type,
+        compatibility: body?.compatibility,
+        warranty_months: body?.warranty_months,
         payment_option: body?.payment_option,
         extra_features: body?.extra_features,
         is_featured: body?.is_featured,
@@ -64,6 +69,12 @@ const pickListingBody = (body) => {
     if (typeof data.version === "string") data.version = data.version.trim();
     if (typeof data.year === "string") data.year = data.year.trim();
     if (typeof data.color === "string") data.color = data.color.trim();
+    if (typeof data.listing_type === "string") {
+        data.listing_type = data.listing_type.trim().toLowerCase();
+    }
+    if (typeof data.accessory_type === "string") {
+        data.accessory_type = data.accessory_type.trim();
+    }
 
     // allow coords as ["33.8","35.5"] etc.
     if (Array.isArray(data.coords)) {
@@ -85,6 +96,7 @@ const pickListingBody = (body) => {
         "number_of_seats",
         "number_of_doors",
         "number_of_views",
+        "warranty_months",
     ];
     for (const f of numFields) {
         const n = parseNumber(data[f]);
@@ -98,6 +110,8 @@ export const createVehicleListing = async (req, res) => {
     try {
         const data = pickListingBody(req.body);
 
+        if (!data.listing_type) data.listing_type = "vehicle";
+
         // Minimal extra validations (mongoose will validate too)
         if (!data.name) return res.status(400).json({ message: "name is required" });
         if (!Array.isArray(data.images)) return res.status(400).json({ message: "images must be an array" });
@@ -110,9 +124,20 @@ export const createVehicleListing = async (req, res) => {
         if (!data.user_id || !isValidObjectId(String(data.user_id)))
             return res.status(400).json({ message: "user_id is invalid" });
 
+        // If category title indicates accessories, force accessory listing type
+        const cat = await VehicleCategories.findById(data.category).select("title");
+        if (cat?.title && String(cat.title).toLowerCase().includes("accessor")) {
+            data.listing_type = "accessory";
+        }
+
+        if (data.listing_type === "accessory" && !data.accessory_type) {
+            return res.status(400).json({ message: "accessory_type is required for accessories" });
+        }
+
         const doc = await VehicleListing.create(data);
         return res.status(201).json(doc);
     } catch (err) {
+        console.log(err.message);
         // Mongoose validation errors
         if (err?.name === "ValidationError") {
             return res.status(400).json({ message: "Validation error", errors: err.errors });
@@ -255,6 +280,9 @@ export const updateVehicleListing = async (req, res) => {
         const { id } = req.params;
         if (!isValidObjectId(id)) return res.status(400).json({ message: "Invalid id" });
 
+        const existing = await VehicleListing.findById(id).select("category listing_type accessory_type");
+        if (!existing) return res.status(404).json({ message: "Not found" });
+
         const data = pickListingBody(req.body);
 
         // If category/user_id provided, validate ids
@@ -268,6 +296,25 @@ export const updateVehicleListing = async (req, res) => {
             if (!Array.isArray(data.coords) || data.coords.length !== 2 || data.coords.some((n) => !Number.isFinite(n))) {
                 return res.status(400).json({ message: "coords must be [lat,lng] numbers" });
             }
+        }
+
+        // Keep listing_type consistent with selected category.
+        const categoryIdToUse = data.category || existing.category;
+        if (categoryIdToUse) {
+            const cat = await VehicleCategories.findById(categoryIdToUse).select("title");
+            const categoryLooksAccessory = cat?.title && String(cat.title).toLowerCase().includes("accessor");
+
+            if (categoryLooksAccessory) {
+                data.listing_type = "accessory";
+            } else if (!data.listing_type) {
+                data.listing_type = existing.listing_type || "vehicle";
+            }
+        }
+
+        const resolvedListingType = data.listing_type || existing.listing_type;
+        const resolvedAccessoryType = data.accessory_type ?? existing.accessory_type;
+        if (resolvedListingType === "accessory" && !resolvedAccessoryType) {
+            return res.status(400).json({ message: "accessory_type is required for accessories" });
         }
 
         const updated = await VehicleListing.findByIdAndUpdate(id, data, {
