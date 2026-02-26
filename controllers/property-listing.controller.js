@@ -21,6 +21,7 @@ export const createPropertyListing = async (req, res) => {
             "coords",
             "bedrooms",
             "bathrooms",
+            "space",
             "extra_features",
             "is_featured",
             "is_sponsored",
@@ -66,6 +67,11 @@ export const getPropertyListings = async (req, res) => {
             bedrooms_max,
             bathrooms_min,
             bathrooms_max,
+            space_min,
+            space_max,
+            lat,
+            lng,
+            radius_km,
             sortBy = "createdAt",
             sortDir = "desc",
         } = req.query;
@@ -108,7 +114,31 @@ export const getPropertyListings = async (req, res) => {
         if (!Number.isNaN(baMin) && baMin !== null) filter.bathrooms = { ...(filter.bathrooms || {}), $gte: baMin };
         if (!Number.isNaN(baMax) && baMax !== null) filter.bathrooms = { ...(filter.bathrooms || {}), $lte: baMax };
 
-        const allowedSort = new Set(["createdAt", "updatedAt", "number_of_views", "bedrooms", "bathrooms"]);
+        const sMin = space_min !== undefined ? Number(space_min) : null;
+        const sMax = space_max !== undefined ? Number(space_max) : null;
+        if (!Number.isNaN(sMin) && sMin !== null) filter.space = { ...(filter.space || {}), $gte: sMin };
+        if (!Number.isNaN(sMax) && sMax !== null) filter.space = { ...(filter.space || {}), $lte: sMax };
+
+        const latN = lat !== undefined ? Number(lat) : null;
+        const lngN = lng !== undefined ? Number(lng) : null;
+        const radiusN = radius_km !== undefined ? Number(radius_km) : null;
+        if (
+            !Number.isNaN(latN) &&
+            latN !== null &&
+            !Number.isNaN(lngN) &&
+            lngN !== null &&
+            !Number.isNaN(radiusN) &&
+            radiusN !== null &&
+            radiusN > 0
+        ) {
+            const latDelta = radiusN / 111.32;
+            const cosLat = Math.cos((latN * Math.PI) / 180);
+            const lngDelta = radiusN / (111.32 * Math.max(Math.abs(cosLat), 0.01));
+            filter["coords.0"] = { $gte: latN - latDelta, $lte: latN + latDelta };
+            filter["coords.1"] = { $gte: lngN - lngDelta, $lte: lngN + lngDelta };
+        }
+
+        const allowedSort = new Set(["createdAt", "updatedAt", "number_of_views", "bedrooms", "bathrooms", "space"]);
         const sortField = allowedSort.has(String(sortBy)) ? String(sortBy) : "createdAt";
         const sortOrder = String(sortDir).toLowerCase() === "asc" ? 1 : -1;
 
@@ -173,6 +203,7 @@ export const updatePropertyListing = async (req, res) => {
             "coords",
             "bedrooms",
             "bathrooms",
+            "space",
             "extra_features",
             "is_featured",
             "is_sponsored",

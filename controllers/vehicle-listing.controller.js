@@ -150,6 +150,9 @@ export const getVehicleListings = async (req, res) => {
         const yearMax = parseNumber(req.query?.year_max);
         const kmMin = parseNumber(req.query?.km_min);
         const kmMax = parseNumber(req.query?.km_max);
+        const lat = parseNumber(req.query?.lat);
+        const lng = parseNumber(req.query?.lng);
+        const radiusKm = parseNumber(req.query?.radius_km);
 
         const filter = {};
 
@@ -194,6 +197,20 @@ export const getVehicleListings = async (req, res) => {
             filter.kilometers = {};
             if (kmMin !== undefined) filter.kilometers.$gte = kmMin;
             if (kmMax !== undefined) filter.kilometers.$lte = kmMax;
+        }
+
+        if (
+            lat !== undefined &&
+            lng !== undefined &&
+            radiusKm !== undefined &&
+            radiusKm > 0
+        ) {
+            const latDelta = radiusKm / 111.32;
+            const cosLat = Math.cos((lat * Math.PI) / 180);
+            const lngDelta = radiusKm / (111.32 * Math.max(Math.abs(cosLat), 0.01));
+
+            filter["coords.0"] = { $gte: lat - latDelta, $lte: lat + latDelta };
+            filter["coords.1"] = { $gte: lng - lngDelta, $lte: lng + lngDelta };
         }
 
         // Sorting

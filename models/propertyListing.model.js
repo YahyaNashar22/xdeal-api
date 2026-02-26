@@ -46,6 +46,10 @@ const propertyListingSchema = new Schema(
             type: Number,
             required: true
         },
+        space: {
+            type: Number,
+            required: true
+        },
         extra_features: {
             type: [String],
             required: true,
