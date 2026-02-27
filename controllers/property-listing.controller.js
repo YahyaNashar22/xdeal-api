@@ -38,7 +38,7 @@ export const createPropertyListing = async (req, res) => {
 
         // return populated (optional but recommended)
         await created.populate("category", "title");
-        await created.populate("user_id", "name email");
+        await created.populate("user_id");
 
         return res.status(201).json(created);
     } catch (err) {
@@ -148,7 +148,7 @@ export const getPropertyListings = async (req, res) => {
                 .skip(skip)
                 .limit(l)
                 .populate("category", "title")
-                .populate("user_id", "name email"),
+                .populate("user_id"),
             PropertyListing.countDocuments(filter),
         ]);
 
@@ -175,7 +175,7 @@ export const getPropertyListingById = async (req, res) => {
 
         const item = await PropertyListing.findById(id)
             .populate("category", "title")
-            .populate("user_id", "name email");
+            .populate("user_id");
 
         if (!item) return res.status(404).json({ message: "Property listing not found" });
 
@@ -220,7 +220,7 @@ export const updatePropertyListing = async (req, res) => {
             runValidators: true,
         })
             .populate("category", "title")
-            .populate("user_id", "name email");
+            .populate("user_id");
 
         if (!updated) return res.status(404).json({ message: "Property listing not found" });
 
@@ -261,7 +261,7 @@ export const incrementPropertyListingViews = async (req, res) => {
             { new: true }
         )
             .populate("category", "title")
-            .populate("user_id", "name email");
+            .populate("user_id");
 
         if (!updated) return res.status(404).json({ message: "Property listing not found" });
 

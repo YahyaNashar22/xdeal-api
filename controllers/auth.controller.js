@@ -130,3 +130,43 @@ export const getMe = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+export const updateMe = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select("+password");
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const { full_name, profile_picture, current_password, new_password } = req.body ?? {};
+
+        if (typeof full_name === "string" && full_name.trim().length > 0) {
+            user.full_name = full_name.trim();
+        }
+
+        if (typeof profile_picture === "string" && profile_picture.trim().length > 0) {
+            user.profile_picture = profile_picture.trim();
+        }
+
+        if (new_password != null && String(new_password).trim().length > 0) {
+            if (!current_password || String(current_password).trim().isEmpty) {
+                return res.status(400).json({ message: "current_password is required to change password" });
+            }
+
+            const isValidPassword = bcrypt.compareSync(String(current_password), user.password);
+            if (!isValidPassword) {
+                return res.status(401).json({ message: "Current password is incorrect" });
+            }
+
+            const salt = bcrypt.genSaltSync(10);
+            user.password = bcrypt.hashSync(String(new_password), salt);
+        }
+
+        await user.save();
+
+        const updated = await User.findById(user._id).select("-password");
+        return res.json(updated);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+};
