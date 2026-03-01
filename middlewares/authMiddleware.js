@@ -17,3 +17,10 @@ export const protect = (req, res, next) => {
         return res.status(401).json({ message: "Invalid token" });
     }
 };
+
+export const requireAdmin = (req, res, next) => {
+    if (!req.user || req.user.is_admin !== true) {
+        return res.status(403).json({ message: "Admin access required" });
+    }
+    next();
+};

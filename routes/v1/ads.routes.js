@@ -7,13 +7,14 @@ import {
     updateAd,
     deleteAd,
 } from "../../controllers/ads.controller.js";
+import { protect, requireAdmin } from "../../middlewares/authMiddleware.js";
 
 const adsRouter = Router();
 
-adsRouter.post("/", createAd);
+adsRouter.post("/", protect, requireAdmin, createAd);
 adsRouter.get("/", getAds);
 adsRouter.get("/:id", getAdById);
-adsRouter.put("/:id", updateAd);
-adsRouter.delete("/:id", deleteAd);
+adsRouter.put("/:id", protect, requireAdmin, updateAd);
+adsRouter.delete("/:id", protect, requireAdmin, deleteAd);
 
 export default adsRouter;
